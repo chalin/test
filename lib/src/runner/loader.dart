@@ -29,8 +29,20 @@ import 'runner_suite.dart';
 import 'vm/environment.dart';
 import 'vm/isolate_test.dart';
 
+typedef Future<RunnerSuite> LoadVMFileHook(String path, Metadata metadata,
+    Configuration config);
+
 /// A class for finding test files and loading them into a runnable form.
 class Loader {
+  /// **Do not set or use this function without express permission from the test
+  /// package authors**.
+  ///
+  /// A function that overrides the loader's default behavior for loading test
+  /// suites on the Dart VM. This function takes the path to the file, the
+  /// file's metadata, and the test runner's configuration and returns a
+  /// [RunnerSuite] for that file.
+  static LoadVMFileHook loadVMFileHook;
+
   /// The test runner configuration.
   final Configuration _config;
 
@@ -144,6 +156,12 @@ class Loader {
   ///
   /// [metadata] is the suite-level metadata for the test.
   Future<RunnerSuite> _loadVmFile(String path, Metadata metadata) async {
+    if (Loader.loadVMFileHook != null) {
+      var suite = await Loader.loadVMFileHook(path, metadata, _config);
+      _suites.add(suite);
+      return suite;
+    }
+
     var receivePort = new ReceivePort();
 
     var isolate;
